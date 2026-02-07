@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sample Activity Timeline – Memryo</title>
+  <meta name="description" content="A sample activity timeline view showing how Memryo displays events, with full data structure and implementation logic.">
+  <link rel="icon" href="images/icon-512.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* Timeline sample page specific styles */
+    .timeline-sample-page .data-block {
+      background: #f8f5ff;
+      border: 1px solid #e5e0f5;
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      margin: 1rem 0;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+      font-size: 0.85rem;
+      overflow-x: auto;
+    }
+    .timeline-sample-page .data-block pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .timeline-sample-page .data-label {
+      font-weight: 600;
+      color: var(--primary);
+      font-size: 0.9rem;
+      margin-bottom: 0.35rem;
+    }
+    .timeline-sample-page .viz-timeline {
+      position: relative;
+      height: 72px;
+      margin: 1.5rem 0;
+      padding: 0 8px;
+      max-width: 100%;
+    }
+    .timeline-sample-page .viz-timeline-line {
+      position: absolute;
+      top: 32px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: #bdbdbd;
+    }
+    .timeline-sample-page .viz-timeline-dot {
+      position: absolute;
+      top: 26px;
+      width: 14px;
+      height: 14px;
+      border-radius: 7px;
+      background: var(--primary);
+      transform: translateX(-50%);
+      border: 2px solid #fff;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    }
+    .timeline-sample-page .viz-timeline-label {
+      position: absolute;
+      top: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--primary);
+      transform: translateX(-50%);
+    }
+    .timeline-sample-page .viz-timeline-gap {
+      position: absolute;
+      top: 48px;
+      font-size: 11px;
+      font-weight: 500;
+      color: #757575;
+      transform: translateX(-50%);
+    }
+    .timeline-sample-page .event-list-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.95rem;
+    }
+    .timeline-sample-page .event-list-row:last-child { border-bottom: 0; }
+    .timeline-sample-page .event-list-row .event-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 5px;
+      background: var(--primary);
+      flex-shrink: 0;
+      margin-top: 6px;
+    }
+    .timeline-sample-page .event-list-row .event-datetime { font-weight: 500; }
+    .timeline-sample-page .event-list-row .event-notes {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-top: 0.25rem;
+    }
+    .timeline-sample-page .logic-box {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem;
+      margin: 1rem 0;
+    }
+    .timeline-sample-page .logic-box h4 {
+      margin: 0 0 0.75rem;
+      font-size: 1rem;
+      color: var(--primary);
+    }
+    .timeline-sample-page .logic-box ul {
+      margin: 0;
+      padding-left: 1.25rem;
+      font-size: 0.95rem;
+      color: var(--text);
+    }
+    .timeline-sample-page .logic-box li { margin: 0.35rem 0; }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="index.html" class="logo">
+        <img src="images/icon.png" alt="Memryo" width="40" height="40">
+        Memryo
+      </a>
+      <nav class="nav">
+        <a href="index.html#features">Features</a>
+        <a href="index.html#screenshots">Screenshots</a>
+        <a href="how-it-works.html">How it works</a>
+        <a href="timeline-sample.html">Timeline sample</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="support.html">Support</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page timeline-sample-page">
+    <div class="container">
+      <h1>Sample Activity Timeline</h1>
+      <p class="updated">This page shows a sample activity with its events and the implementation logic Memryo uses for the timeline view.</p>
+
+      <h2>Sample Activity: Car Wash</h2>
+      <p>We use <strong>Car Wash</strong> from the Car Maintenance category as the example. It has a <strong>monthly</strong> recurrence (every month). The timeline shows exactly 6 events, rendered as the real app would.</p>
+
+      <h3>1. Timeline visualization (as in the app)</h3>
+      <p>The timeline shows the <strong>last 6 events</strong> for the selected activity. For <strong>monthly</strong> recurrence, event labels use month/day (e.g. "Sep 4"), and the gap between events is shown in days (e.g. "31d"). Period boundary markers are hidden for monthly to avoid clutter.</p>
+
+      <div class="logic-box">
+        <h4>Timeline behavior</h4>
+        <ul>
+          <li><strong>Filter:</strong> Events are filtered by <code>activityId === selectedActivity</code> (or <code>activity</code> name for backward compatibility).</li>
+          <li><strong>Sort:</strong> For the timeline bar, events are sorted oldest → newest. For the event list below, newest → oldest.</li>
+          <li><strong>Range:</strong> Uses the first and last event in the (up to) 6 events to determine the start and end of the line.</li>
+          <li><strong>Position:</strong> Each event’s position is 0–100% along the line based on its timestamp within that range.</li>
+        </ul>
+      </div>
+
+      <div class="viz-timeline" style="max-width: 560px; margin-left: auto; margin-right: auto;">
+        <div class="viz-timeline-line"></div>
+        <div class="viz-timeline-dot" style="left: 2.2%;"></div>
+        <div class="viz-timeline-label" style="left: 2.2%;">Sep 4</div>
+        <div class="viz-timeline-dot" style="left: 19.4%;"></div>
+        <div class="viz-timeline-label" style="left: 19.4%;">Oct 5</div>
+        <div class="viz-timeline-gap" style="left: 10.8%;">31d</div>
+        <div class="viz-timeline-dot" style="left: 34.4%;"></div>
+        <div class="viz-timeline-label" style="left: 34.4%;">Nov 2</div>
+        <div class="viz-timeline-gap" style="left: 26.9%;">28d</div>
+        <div class="viz-timeline-dot" style="left: 51.6%;"></div>
+        <div class="viz-timeline-label" style="left: 51.6%;">Dec 3</div>
+        <div class="viz-timeline-gap" style="left: 43%;">31d</div>
+        <div class="viz-timeline-dot" style="left: 69.4%;"></div>
+        <div class="viz-timeline-label" style="left: 69.4%;">Jan 5</div>
+        <div class="viz-timeline-gap" style="left: 60.5%;">33d</div>
+        <div class="viz-timeline-dot" style="left: 87.5%;"></div>
+        <div class="viz-timeline-label" style="left: 87.5%;">Feb 7</div>
+        <div class="viz-timeline-gap" style="left: 78.5%;">33d</div>
+      </div>
+
+      <p style="text-align: center; font-size: 0.9rem; color: var(--text-muted);">Period: Sep 2025 – Feb 2026 • Monthly recurrence • 6 events</p>
+
+      <h3>2. Event list (as shown in app)</h3>
+      <p>Each event row shows date/time (formatted by recurrence), a dot, and optional notes. Actions: add/edit notes, edit date/time, delete.</p>
+
+      <div class="logic-box" style="padding: 0; overflow: hidden;">
+        <div class="event-list-row">
+          <div class="event-dot"></div>
+          <div>
+            <div class="event-datetime">Feb 7, 2026</div>
+            <div class="event-notes">Notes: Wax included</div>
+          </div>
+        </div>
+        <div class="event-list-row">
+          <div class="event-dot"></div>
+          <div>
+            <div class="event-datetime">Jan 5, 2026</div>
+            <div class="event-notes">Notes: Touchless wash</div>
+          </div>
+        </div>
+        <div class="event-list-row">
+          <div class="event-dot"></div>
+          <div>
+            <div class="event-datetime">Dec 3, 2025</div>
+            <div class="event-notes">Notes: Hand wash, interior vacuum</div>
+          </div>
+        </div>
+        <div class="event-list-row">
+          <div class="event-dot"></div>
+          <div>
+            <div class="event-datetime">Nov 2, 2025</div>
+            <div class="event-notes">Notes: Quick wash</div>
+          </div>
+        </div>
+        <div class="event-list-row">
+          <div class="event-dot"></div>
+          <div>
+            <div class="event-datetime">Oct 5, 2025</div>
+            <div class="event-notes">Notes: Full detail</div>
+          </div>
+        </div>
+        <div class="event-list-row">
+          <div class="event-dot"></div>
+          <div>
+            <div class="event-datetime">Sep 4, 2025</div>
+            <div class="event-notes">Notes: Self-service bay</div>
+          </div>
+        </div>
+      </div>
+
+      <h3>3. “Time since last activity” display</h3>
+      <p>Below the timeline, Memryo shows how long it has been since the last recorded event. The format depends on the activity’s recurrence:</p>
+
+      <div class="logic-box">
+        <ul>
+          <li><strong>hourly:</strong> e.g. “2 days, 5 hours”</li>
+          <li><strong>daily:</strong> e.g. “3 days”</li>
+          <li><strong>weekly:</strong> e.g. “2 weeks, 4 days”</li>
+          <li><strong>monthly / quarterly / half-yearly:</strong> e.g. “2 months, 5 days”</li>
+          <li><strong>yearly:</strong> e.g. “1 year, 3 months, 12 days”</li>
+        </ul>
+      </div>
+
+      <p>For our sample (Car Wash): <strong>It’s been 0 days since the last activity</strong> (just recorded today).</p>
+
+      <h3>4. Implementation logic summary</h3>
+
+      <h4>Recording (“Remember it”)</h4>
+      <ul>
+        <li>Creates a new event with <code>id</code> (timestamp string), <code>activityId</code>, <code>activity</code> (name), <code>timestamp</code> (ISO), <code>date</code>, <code>time</code>, <code>notes</code> (initially empty).</li>
+        <li><strong>Duplicate check:</strong> Same activity + same local calendar day (or same hour for hourly recurrence) → “Duplicate event?” alert with “Add anyway” option.</li>
+        <li><strong>Early reminder:</strong> If last event was &lt; 50% of the recurrence period ago → “Early reminder?” alert with “Add anyway” option.</li>
+        <li>Events are stored in AsyncStorage under key <code>events</code>, prepended to the list (newest first).</li>
+      </ul>
+
+      <h4>Recurrence periods (used for warnings and timeline scaling)</h4>
+      <ul>
+        <li><strong>hourly:</strong> 1 hour</li>
+        <li><strong>daily:</strong> 1 day</li>
+        <li><strong>weekly:</strong> 7 days</li>
+        <li><strong>monthly:</strong> ~30 days</li>
+        <li><strong>quarterly:</strong> ~90 days (3 months)</li>
+        <li><strong>half-yearly:</strong> ~180 days (6 months)</li>
+        <li><strong>yearly:</strong> ~365 days</li>
+      </ul>
+
+      <h4>Timeline axis by recurrence</h4>
+      <ul>
+        <li><strong>hourly:</strong> Hours (start/end labels show clock time)</li>
+        <li><strong>daily:</strong> Days (e.g. Nov 15, Nov 22)</li>
+        <li><strong>weekly:</strong> Weeks with day labels</li>
+        <li><strong>monthly:</strong> Months (e.g. Nov 2025, Dec 2025)</li>
+        <li><strong>quarterly:</strong> Quarters (e.g. Q4/25, Q1/26)</li>
+        <li><strong>half-yearly:</strong> Half-years (e.g. H2/25, H1/26)</li>
+        <li><strong>yearly:</strong> Years (e.g. 2024, 2025)</li>
+      </ul>
+
+      <h4>Event actions</h4>
+      <ul>
+        <li><strong>Edit:</strong> Change date, time, and notes. Future dates are not allowed.</li>
+        <li><strong>Notes:</strong> Add or edit notes via the note icon. Notes can store mileage, filter specs, receipts, etc.</li>
+        <li><strong>Delete:</strong> Remove event permanently (with confirmation).</li>
+      </ul>
+
+      <h3>5. Storage</h3>
+      <p>All data is stored locally using AsyncStorage:</p>
+      <ul>
+        <li><code>categories</code> – JSON array of category objects</li>
+        <li><code>activities</code> – JSON array of activity objects</li>
+        <li><code>events</code> – JSON array of event objects</li>
+      </ul>
+      <p>No data is sent to external servers. Everything stays on the device.</p>
+
+      <hr>
+
+      <p><a href="index.html">← Back to Memryo</a></p>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <span>Memryo © 2026</span>
+      <span>
+        <a href="privacy.html">Privacy policy</a>
+        <a href="support.html">Support</a>
+      </span>
+    </div>
+  </footer>
+</body>
+</html>
